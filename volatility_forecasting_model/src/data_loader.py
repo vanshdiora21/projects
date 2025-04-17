@@ -16,7 +16,6 @@ def fetch_price_data(ticker, start_date, end_date):
 
     # Create a 2-level MultiIndex: (Column name, Ticker)
     df.columns = pd.MultiIndex.from_tuples([(col, ticker) for col in df.columns])
-
     return df
 def compute_log_returns(price_series: pd.Series) -> pd.Series:
     """
