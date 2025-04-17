@@ -1,34 +1,22 @@
-
-import pandas as pd
 from arch import arch_model
+import numpy as np
+import pandas as pd
 
-def fit_garch_model(returns, p=1, q=1):
+def fit_garch_model(log_returns: pd.Series, p: int = 1, q: int = 1):
     """
-    Fits a GARCH(p, q) model to the returns.
-
-    Parameters:
-    returns (pd.Series): Series of log returns
-    p (int): Order of GARCH terms
-    q (int): Order of ARCH terms
-
-    Returns:
-    Fitted ARCH model result
+    Fits a GARCH(p, q) model to the log returns.
+    Returns a fitted model result object.
     """
-    model = arch_model(returns * 100, vol='Garch', p=p, q=q, rescale=False)
-    result = model.fit(disp='off')
+    model = arch_model(log_returns, vol='Garch', p=p, q=q, dist='normal')
+    result = model.fit(disp="off")
     return result
 
-def forecast_volatility(result, horizon=5):
+def forecast_volatility(result, horizon: int = 5) -> np.ndarray:
     """
-    Forecasts volatility from a fitted GARCH model.
-
-    Parameters:
-    result: Fitted GARCH model result object
-    horizon (int): Number of days ahead to forecast
-
-    Returns:
-    pd.Series: Forecasted volatility
+    Forecasts volatility using a fitted GARCH model.
+    Returns predicted standard deviation for the specified horizon.
     """
-    forecasts = result.forecast(horizon=horizon)
-    vol_forecast = forecasts.variance.iloc[-1] ** 0.5  # convert variance to std dev
-    return vol_forecast
+    forecast = result.forecast(horizon=horizon)
+    predicted_variance = forecast.variance.values[-1]
+    predicted_volatility = np.sqrt(predicted_variance)
+    return predicted_volatility
