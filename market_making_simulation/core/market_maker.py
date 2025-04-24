@@ -50,7 +50,7 @@ class MarketMaker:
             spread = self._dynamic_spread()
             size = self._dynamic_order_size()
             ask_price = self.fair_price + spread + order_flow_bias  # Apply skew
-            self.order_book.add_order("sell", ask_price, size)
+            self.order_book.add_order("sell", ask_price, size, maker=self.maker_tag)
 
     def cancel_stale_quotes(self):
         self.order_book.bids = [o for o in self.order_book.bids if abs(o["price"] - self.fair_price) > 10]
