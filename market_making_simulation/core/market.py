@@ -11,7 +11,7 @@ class MarketSimulator:
         self.mid_price = mid_price
         self.initial_mid_price = mid_price
         self.market_maker = MarketMaker(self.order_book, fair_price=mid_price)
-        self.evaluator = Evaluator(fair_price=mid_price)
+        self.evaluator = Evaluator(fair_price=mid_price, export_filename=export_filename)
         self.regime = regime
         self.trend_bias = 0.5  # For trending regime
         self.time_step = 0     # For oscillation
