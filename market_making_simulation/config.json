@@ -2,24 +2,26 @@
     "simulation_steps": 20,
     "regime": "mean-reverting",
     "mm1": {
-      "inventory_limit": 20,
-      "base_spread": 2,
-      "base_order_size": 5
+    "inventory_limit": 20,
+    "base_spread": 1,   
+    "base_order_size": 5
     },
     "mm2": {
-      "inventory_limit": 10,
-      "base_spread": 3,
-      "base_order_size": 4
+    "inventory_limit": 10,
+    "base_spread": 1,   
+    "base_order_size": 4
     },
+
     "order_flow": {
       "bias_scaling": 0.5,
       "window_size": 5
     },
     "noise_trader": {
-      "enabled": true,
-      "frequency": 3,
-      "min_qty": 5,
-      "max_qty": 15
+    "enabled": true,
+    "frequency": 3,
+    "min_qty": 10,
+    "max_qty": 20
     }
+
   }
   

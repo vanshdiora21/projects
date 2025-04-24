@@ -34,11 +34,11 @@ class Evaluator:
         self.unrealized_pnl = self.inventory * current_price
 
     def snapshot(self, current_price, best_bid, best_ask):
-        self.update_unrealized_pnl(current_price)
-        total_pnl = self.realized_pnl + self.unrealized_pnl
+        unrealized_pnl = self.inventory * (mid_price - self.fair_price)
+        total_pnl = self.realized_pnl + unrealized_pnl
 
         self.realized_pnl_history.append(self.realized_pnl)
-        self.unrealized_pnl_history.append(self.unrealized_pnl)
+        self.unrealized_pnl_history.append(unrealized_pnl)
         self.total_pnl_history.append(total_pnl)
         self.inventory_history.append(self.inventory)
 
@@ -58,6 +58,7 @@ class Evaluator:
         self.plot_metrics()
         self.export_to_csv()
         self.compute_risk_metrics() 
+        self.plot_pnl_attribution()
 
     def plot_metrics(self):
         plt.figure(figsize=(15, 5))
@@ -129,3 +130,21 @@ class Evaluator:
             print(f"Sharpe Ratio: {sharpe:.2f}")
         else:
             print("Sharpe Ratio: N/A (not enough variance)")
+
+    def plot_pnl_attribution(self):
+
+        steps = range(len(self.realized_pnl_history))
+        plt.figure(figsize=(10, 6))
+
+        plt.plot(steps, self.realized_pnl_history, label="Realized PnL", color="green")
+        plt.plot(steps, self.unrealized_pnl_history, label="Unrealized PnL", color="orange")
+        plt.plot(steps, self.total_pnl_history, label="Total PnL", color="blue")
+        
+        plt.bar(steps, self.inventory_history, alpha=0.3, label="Inventory", color="gray")
+
+        plt.xlabel("Simulation Steps")
+        plt.ylabel("PnL / Inventory")
+        plt.title("PnL Attribution and Inventory Over Time")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()

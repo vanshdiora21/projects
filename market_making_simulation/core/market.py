@@ -13,25 +13,21 @@ class MarketSimulator:
         self.mid_price = 100
         self.initial_mid_price = 100
 
-        # MM1 & MM2 setup using config
+        # MM1 & MM2 setup
         mm1_cfg = config["mm1"]
         mm2_cfg = config["mm2"]
 
-        self.market_maker = MarketMaker(
-            self.order_book, fair_price=self.mid_price,
-            inventory_limit=mm1_cfg["inventory_limit"],
-            base_spread=mm1_cfg["base_spread"],
-            base_order_size=mm1_cfg["base_order_size"],
-            maker_tag="MM1"
-        )
+        self.market_maker = MarketMaker(self.order_book, fair_price=self.mid_price,
+                                        inventory_limit=mm1_cfg["inventory_limit"],
+                                        base_spread=mm1_cfg["base_spread"],
+                                        base_order_size=mm1_cfg["base_order_size"],
+                                        maker_tag="MM1")
 
-        self.market_maker2 = MarketMaker(
-            self.order_book, fair_price=self.mid_price,
-            inventory_limit=mm2_cfg["inventory_limit"],
-            base_spread=mm2_cfg["base_spread"],
-            base_order_size=mm2_cfg["base_order_size"],
-            maker_tag="MM2"
-        )
+        self.market_maker2 = MarketMaker(self.order_book, fair_price=self.mid_price,
+                                         inventory_limit=mm2_cfg["inventory_limit"],
+                                         base_spread=mm2_cfg["base_spread"],
+                                         base_order_size=mm2_cfg["base_order_size"],
+                                         maker_tag="MM2")
 
         self.evaluator = Evaluator(fair_price=self.mid_price, export_filename="MM1_metrics.csv")
         self.evaluator2 = Evaluator(fair_price=self.mid_price, export_filename="MM2_metrics.csv")
@@ -44,8 +40,7 @@ class MarketSimulator:
         self.time_step = 0
 
     def simulate_latency(self):
-        latency = random.uniform(0.1, 0.5)
-        time.sleep(latency)
+        time.sleep(random.uniform(0.1, 0.3))
 
     def update_mid_price(self):
         if self.regime == "mean-reverting":
@@ -65,7 +60,7 @@ class MarketSimulator:
     def generate_external_order(self):
         order_type = random.choice(["limit", "market"])
         side = random.choice(["buy", "sell"])
-        quantity = random.randint(1, 10)
+        quantity = random.randint(10, 20)  # Boosted order sizes
         if order_type == "limit":
             price_offset = random.randint(-5, 5)
             price = self.mid_price + price_offset
@@ -75,27 +70,20 @@ class MarketSimulator:
 
     def generate_liquidity_shock(self):
         mm_inventory = self.market_maker.inventory
-        if mm_inventory > 10:
-            shock_side = "sell"
-        elif mm_inventory < -10:
-            shock_side = "buy"
-        else:
-            shock_side = random.choice(["buy", "sell"])
-        num_orders = random.randint(3, 7)
-        shock_orders = [{"type": "market", "side": shock_side, "quantity": random.randint(10, 20)} for _ in range(num_orders)]
-        print(f"\n🛘 Adaptive Liquidity Shock! {num_orders} large {shock_side.upper()} market orders incoming.")
+        shock_side = "sell" if mm_inventory > 10 else "buy" if mm_inventory < -10 else random.choice(["buy", "sell"])
+        shock_orders = [{"type": "market", "side": shock_side, "quantity": random.randint(10, 20)} for _ in range(random.randint(3, 7))]
+        print(f"\n🛘 Adaptive Liquidity Shock! {len(shock_orders)} large {shock_side.upper()} market orders incoming.")
         return shock_orders
 
     def process_trades(self, trades, side):
-        if trades:
-            for trade in trades:
-                maker = trade.get("maker")
-                if maker == "MM1":
-                    self.market_maker.process_trades([trade], side)
-                    self.evaluator.record_trade([trade], side)
-                elif maker == "MM2":
-                    self.market_maker2.process_trades([trade], side)
-                    self.evaluator2.record_trade([trade], side)
+        for trade in trades:
+            maker = trade.get("maker")
+            if maker == "MM1":
+                self.market_maker.process_trades([trade], side)
+                self.evaluator.record_trade([trade], side)
+            elif maker == "MM2":
+                self.market_maker2.process_trades([trade], side)
+                self.evaluator2.record_trade([trade], side)
 
     def simulate_order_flow(self, num_steps=15):
         for step in range(num_steps):
@@ -104,17 +92,14 @@ class MarketSimulator:
             self.market_maker.fair_price = self.mid_price
             self.market_maker2.fair_price = self.mid_price
 
-            buy_count = self.order_flow_window.count("buy")
-            sell_count = self.order_flow_window.count("sell")
-            flow_bias = buy_count - sell_count
+            flow_bias = self.order_flow_window.count("buy") - self.order_flow_window.count("sell")
             order_flow_adjustment = flow_bias * self.config["order_flow"]["bias_scaling"]
 
             self.market_maker.quote(order_flow_adjustment)
             self.market_maker2.quote()
 
             if step % 5 == 4:
-                shock_orders = self.generate_liquidity_shock()
-                for order in shock_orders:
+                for order in self.generate_liquidity_shock():
                     trades = self.order_book.match_order(order["side"], order["quantity"])
                     print(f"Shock trade: {trades}")
                     self.process_trades(trades, order["side"])
@@ -149,7 +134,6 @@ class MarketSimulator:
             self.order_book.print_order_book()
             print(f"MM1 Inventory: {self.market_maker.inventory} | MM2 Inventory: {self.market_maker2.inventory}")
             print(f"Order Flow Window: {self.order_flow_window}")
-
             self.time_step += 1
             time.sleep(1)
 
@@ -173,9 +157,7 @@ class MarketSimulator:
 
     def noise_trader_action(self):
         side = random.choice(["buy", "sell"])
-        quantity = random.randint(
-            self.noise_trader_cfg["min_qty"], self.noise_trader_cfg["max_qty"]
-        )
+        quantity = random.randint(self.noise_trader_cfg["min_qty"], self.noise_trader_cfg["max_qty"])
         print(f"🟡 Noise trader submits {side.upper()} {quantity}")
         trades = self.order_book.match_order(side, quantity)
         self.process_trades(trades, side)
