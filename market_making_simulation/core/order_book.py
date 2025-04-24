@@ -6,20 +6,16 @@ class OrderBook:
         self.bids = []  # List of dicts: {"price": ..., "quantity": ..., "timestamp": ...}
         self.asks = []
 
-    def add_order(self, order_type, price, quantity):
-        order = {
-            "price": price,
-            "quantity": quantity,
-            "timestamp": time.time()
-        }
-        if order_type == "buy":
+    def add_order(self, side, price, quantity, maker="MM1"):
+        order = {"side": side, "price": price, "quantity": quantity, "maker": maker}
+        
+        if side == "buy":
             self.bids.append(order)
-            # Sort bids: highest price first, then FIFO
-            self.bids.sort(key=lambda x: (-x["price"], x["timestamp"]))
-        elif order_type == "sell":
+            self.bids = sorted(self.bids, key=lambda x: -x["price"])  # Highest price first
+        else:
             self.asks.append(order)
-            # Sort asks: lowest price first, then FIFO
-            self.asks.sort(key=lambda x: (x["price"], x["timestamp"]))
+            self.asks = sorted(self.asks, key=lambda x: x["price"])  # Lowest price first
+
 
     def match_order(self, order_type, quantity):
         trades = []
@@ -57,3 +53,21 @@ class OrderBook:
         print("Asks:")
         for ask in self.asks:
             print(f"Price: {ask['price']}, Quantity: {ask['quantity']}")
+    def get_depth(self, bin_size=1):
+        """
+        Returns order book depth aggregated by price bins.
+        """
+        from collections import defaultdict
+        depth = defaultdict(lambda: {"buy": 0, "sell": 0})
+
+        # Aggregate bids
+        for order in self.bids:
+            price_bin = bin_size * round(order["price"] / bin_size)
+            depth[price_bin]["buy"] += order["quantity"]
+
+        # Aggregate asks
+        for order in self.asks:
+            price_bin = bin_size * round(order["price"] / bin_size)
+            depth[price_bin]["sell"] += order["quantity"]
+
+        return depth

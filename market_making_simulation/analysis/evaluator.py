@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 class Evaluator:
-    def __init__(self, fair_price):
+    def __init__(self, fair_price, export_filename="simulation_metrics.csv"):
         self.fair_price = fair_price
         self.realized_pnl = 0
         self.unrealized_pnl = 0

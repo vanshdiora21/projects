@@ -4,17 +4,24 @@ import time
 from core.order_book import OrderBook
 from core.market_maker import MarketMaker
 from analysis.evaluator import Evaluator
+import matplotlib.pyplot as plt
 
 class MarketSimulator:
-    def __init__(self, mid_price=100, regime="mean-reverting"):
+    def __init__(self, mid_price=100, regime="mean-reverting", export_filename="simulation_metrics.csv"):
         self.order_book = OrderBook()
         self.mid_price = mid_price
         self.initial_mid_price = mid_price
-        self.market_maker = MarketMaker(self.order_book, fair_price=mid_price)
-        self.evaluator = Evaluator(fair_price=mid_price, export_filename=export_filename)
+        self.market_maker = MarketMaker(self.order_book, fair_price=mid_price, inventory_limit=20, maker_tag="MM1")
+        self.market_maker2 = MarketMaker(self.order_book, fair_price=mid_price, inventory_limit=10, maker_tag="MM2")
+
+
+        self.evaluator = Evaluator(fair_price=mid_price, export_filename=export_filename)  # Pass export_filename here
+        self.evaluator2 = Evaluator(fair_price=mid_price, export_filename="MM2_" + export_filename)
         self.regime = regime
-        self.trend_bias = 0.5  # For trending regime
-        self.time_step = 0     # For oscillation
+        self.trend_bias = 0.5
+        self.time_step = 0
+        self.order_flow_window = []
+        self.order_flow_limit = 5
 
     def simulate_latency(self):
         """
@@ -38,6 +45,10 @@ class MarketSimulator:
             direction = 1 if random.random() < self.trend_bias else -1
             drift = direction * random.uniform(0, 1)
             self.mid_price += drift
+    def update_order_flow(self, side):
+        self.order_flow_window.append(side)
+        if len(self.order_flow_window) > self.order_flow_limit:
+            self.order_flow_window.pop(0)
 
     def generate_external_order(self):
         """
@@ -82,38 +93,50 @@ class MarketSimulator:
         for step in range(num_steps):
             print(f"\n--- Step {step+1} ---")
 
-            # 1. Update mid-price
+            # 1. Update mid-price (market regime)
             self.update_mid_price()
-            self.market_maker.fair_price = self.mid_price  # Sync MM fair price
+            self.market_maker.fair_price = self.mid_price
+            self.market_maker2.fair_price = self.mid_price  # Sync MM2
 
-            # 2. Market Maker places quotes
-            self.market_maker.quote()
+            # 2. Calculate order flow bias for MM1
+            buy_count = self.order_flow_window.count("buy")
+            sell_count = self.order_flow_window.count("sell")
+            flow_bias = buy_count - sell_count
+            order_flow_adjustment = flow_bias * 0.5  # Skew factor
 
-            # 3. Liquidity shock every 5 steps
+            # 3. MM1 and MM2 quote independently
+            self.market_maker.quote(order_flow_adjustment)  # MM1 with skew
+            self.market_maker2.quote()                      # MM2 with no skew
+
+            # 4. Handle liquidity shock every 5 steps
             if step % 5 == 4:
                 shock_orders = self.generate_liquidity_shock()
                 for order in shock_orders:
                     trades = self.order_book.match_order(order["side"], order["quantity"])
                     print(f"Shock trade: {trades}")
-                    if trades:
-                        self.market_maker.process_trades(trades, order["side"])
-                        self.evaluator.record_trade(trades, order["side"])
+                    self.process_trades(trades, order["side"])
+                    self.update_order_flow(order["side"])
             else:
+                # 5. Simulate latency
                 self.simulate_latency()
 
+                # 6. External order arrives
                 order = self.generate_external_order()
                 print(f"External order: {order}")
 
                 if order["type"] == "limit":
                     self.order_book.add_order(order["side"], order["price"], order["quantity"])
-                else:
+                else:  # Market order
                     trades = self.order_book.match_order(order["side"], order["quantity"])
                     print(f"External trades: {trades}")
-                    if trades:
-                        self.market_maker.process_trades(trades, order["side"])
-                        self.evaluator.record_trade(trades, order["side"])
+                    self.process_trades(trades, order["side"])
+                    self.update_order_flow(order["side"])
 
-            # 4. Evaluation snapshot
+            # 7. Noise trader acts every 3 steps
+            if step % 3 == 0:
+                self.noise_trader_action()
+
+            # 8. Snapshot for evaluation
             best_bid = self.order_book.get_best_bid()
             best_ask = self.order_book.get_best_ask()
             mid_price = self.mid_price
@@ -121,15 +144,58 @@ class MarketSimulator:
                 mid_price = (best_bid["price"] + best_ask["price"]) / 2
 
             self.evaluator.snapshot(mid_price, best_bid, best_ask)
+            self.evaluator2.snapshot(mid_price, best_bid, best_ask)
 
-            # 5. Print market state
+            # 9. Optional: Plot order book depth every 5 steps
+            if step % 5 == 0:
+                self.plot_order_book_depth()
+
+            # 10. Print state
             print(f"Mid-price: {round(self.mid_price, 2)}")
             self.order_book.print_order_book()
-            print(f"Market Maker Inventory: {self.market_maker.inventory}")
+            print(f"MM1 Inventory: {self.market_maker.inventory} | MM2 Inventory: {self.market_maker2.inventory}")
+            print(f"Order Flow Window: {self.order_flow_window}")
 
-            # 6. Step delay
+            # 11. Advance time
             self.time_step += 1
             time.sleep(1)
 
-        # Final report
+        # 12. Final reports
         self.evaluator.report()
+        self.evaluator2.report()
+
+    def plot_order_book_depth(self):
+        
+
+        depth = self.order_book.get_depth(bin_size=1)
+        prices = sorted(depth.keys())
+
+        buy_sizes = [depth[p]["buy"] for p in prices]
+        sell_sizes = [depth[p]["sell"] for p in prices]
+
+        plt.figure(figsize=(8, 4))
+        plt.bar(prices, buy_sizes, width=0.8, label="Buy Depth", color="blue", alpha=0.6)
+        plt.bar(prices, sell_sizes, width=0.8, label="Sell Depth", color="red", alpha=0.6, bottom=buy_sizes)
+        plt.axvline(self.mid_price, linestyle='--', color='black', label="Mid-price")
+        plt.xlabel("Price")
+        plt.ylabel("Volume")
+        plt.title("Order Book Depth")
+        plt.legend()
+        plt.show()
+
+    def noise_trader_action(self):
+        """
+        Noise trader submits random market orders independent of external flow.
+        """
+        side = random.choice(["buy", "sell"])
+        quantity = random.randint(5, 15)  # Larger orders
+        print(f"🟡 Noise trader submits {side.upper()} {quantity}")
+
+        trades = self.order_book.match_order(side, quantity)
+        if trades:
+            self.market_maker.process_trades(trades, side)
+            self.evaluator.record_trade(trades, side)
+        # Update order flow window
+        self.order_flow_window.append(side)
+        if len(self.order_flow_window) > self.order_flow_limit:
+            self.order_flow_window.pop(0)
