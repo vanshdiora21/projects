@@ -17,7 +17,7 @@ class Evaluator:
         self.total_pnl_history = []
         self.inventory_history = []
         self.spread_history = []
-        
+        self.market_impact_data = []
 
     def record_trade(self, trades, side):
         for trade in trades:
@@ -29,6 +29,10 @@ class Evaluator:
             elif side == "sell":
                 self.inventory -= qty
                 self.realized_pnl += price * qty
+    def record_market_impact(self, order_size, pre_mid_price, post_mid_price):
+        price_impact = post_mid_price - pre_mid_price
+        self.market_impact_data.append((order_size, price_impact))
+
 
     def update_unrealized_pnl(self, current_price):
         self.unrealized_pnl = self.inventory * current_price
@@ -59,6 +63,7 @@ class Evaluator:
         self.export_to_csv()
         self.compute_risk_metrics() 
         self.plot_pnl_attribution()
+        self.plot_market_impact()
 
     def plot_metrics(self):
         plt.figure(figsize=(15, 5))
@@ -146,5 +151,17 @@ class Evaluator:
         plt.ylabel("PnL / Inventory")
         plt.title("PnL Attribution and Inventory Over Time")
         plt.legend()
+        plt.tight_layout()
+        plt.show()
+    def plot_market_impact(self):
+        if not self.market_impact_data:
+            return
+
+        order_sizes, price_impacts = zip(*self.market_impact_data)
+        plt.figure(figsize=(8, 5))
+        plt.scatter(order_sizes, price_impacts, alpha=0.5)
+        plt.xlabel("Order Size")
+        plt.ylabel("Price Impact")
+        plt.title("Market Impact (Order Size vs Price Impact)")
         plt.tight_layout()
         plt.show()

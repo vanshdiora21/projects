@@ -100,13 +100,20 @@ class MarketSimulator:
 
             if step % 5 == 4:
                 for order in self.generate_liquidity_shock():
+                    pre_mid_price = self.mid_price
                     trades = self.order_book.match_order(order["side"], order["quantity"])
                     print(f"Shock trade: {trades}")
                     self.process_trades(trades, order["side"])
                     self.update_order_flow(order["side"])
+                    best_bid = self.order_book.get_best_bid()
+                    best_ask = self.order_book.get_best_ask()
+                    post_mid_price = (best_bid["price"] + best_ask["price"]) / 2 if best_bid and best_ask else self.mid_price
+                    self.evaluator.record_market_impact(order["quantity"], pre_mid_price, post_mid_price)
+                    self.evaluator2.record_market_impact(order["quantity"], pre_mid_price, post_mid_price)
             else:
                 self.simulate_latency()
                 order = self.generate_external_order()
+                pre_mid_price = self.mid_price
                 print(f"External order: {order}")
                 if order["type"] == "limit":
                     self.order_book.add_order(order["side"], order["price"], order["quantity"])
@@ -115,9 +122,25 @@ class MarketSimulator:
                     print(f"External trades: {trades}")
                     self.process_trades(trades, order["side"])
                     self.update_order_flow(order["side"])
+                    best_bid = self.order_book.get_best_bid()
+                    best_ask = self.order_book.get_best_ask()
+                    post_mid_price = (best_bid["price"] + best_ask["price"]) / 2 if best_bid and best_ask else self.mid_price
+                    self.evaluator.record_market_impact(order["quantity"], pre_mid_price, post_mid_price)
+                    self.evaluator2.record_market_impact(order["quantity"], pre_mid_price, post_mid_price)
 
             if self.noise_trader_cfg["enabled"] and step % self.noise_trader_cfg["frequency"] == 0:
-                self.noise_trader_action()
+                side = random.choice(["buy", "sell"])
+                quantity = random.randint(self.noise_trader_cfg["min_qty"], self.noise_trader_cfg["max_qty"])
+                pre_mid_price = self.mid_price
+                print(f"🟡 Noise trader submits {side.upper()} {quantity}")
+                trades = self.order_book.match_order(side, quantity)
+                self.process_trades(trades, side)
+                self.update_order_flow(side)
+                best_bid = self.order_book.get_best_bid()
+                best_ask = self.order_book.get_best_ask()
+                post_mid_price = (best_bid["price"] + best_ask["price"]) / 2 if best_bid and best_ask else self.mid_price
+                self.evaluator.record_market_impact(quantity, pre_mid_price, post_mid_price)
+                self.evaluator2.record_market_impact(quantity, pre_mid_price, post_mid_price)
 
             best_bid = self.order_book.get_best_bid()
             best_ask = self.order_book.get_best_ask()
@@ -139,6 +162,7 @@ class MarketSimulator:
 
         self.evaluator.report()
         self.evaluator2.report()
+
 
     def plot_order_book_depth(self):
         depth = self.order_book.get_depth(bin_size=1)
