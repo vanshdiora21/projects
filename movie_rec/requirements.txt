@@ -1,0 +1,14 @@
+pandas
+numpy
+scikit-learn
+requests
+fastapi
+uvicorn
+nltk
+scipy
+python-dotenv
+streamlit
+imdbpy
+sentence-transformers
+sqlalchemy
+lightfm
