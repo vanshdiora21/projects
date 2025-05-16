@@ -9,5 +9,5 @@ scipy
 python-dotenv
 streamlit
 imdbpy
-sentence-transformers
+#sentence-transformers
 sqlalchemy
