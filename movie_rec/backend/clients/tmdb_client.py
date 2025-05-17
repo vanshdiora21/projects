@@ -3,14 +3,14 @@ load_dotenv()
 
 import os
 import requests
+from functools import lru_cache
 
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
-
 if not TMDB_API_KEY:
-    raise RuntimeError("TMDB_API_KEY not found. Did you forget to create .env?")
+    raise RuntimeError("TMDB_API_KEY not found.")
 
-
-def search_movie(title):
+@lru_cache(maxsize=100)
+def search_movie(title: str):
     url = "https://api.themoviedb.org/3/search/movie"
     params = {"api_key": TMDB_API_KEY, "query": title}
     response = requests.get(url, params=params)
@@ -19,10 +19,10 @@ def search_movie(title):
         print(f"[ERROR] TMDb search failed: {response.status_code}, {response.text}")
         return []
 
-    data = response.json()
-    return data.get("results", [])
+    return response.json().get("results", [])
 
-def get_movie_details(movie_id):
+@lru_cache(maxsize=200)
+def get_movie_details(movie_id: int):
     url = f"https://api.themoviedb.org/3/movie/{movie_id}"
     params = {"api_key": TMDB_API_KEY}
     response = requests.get(url, params=params)
