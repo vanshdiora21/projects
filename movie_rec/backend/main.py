@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Query
-from backend.tmdb_client import search_movie, get_movie_details
+from backend.api.routes import router
 
-app = FastAPI()
+app = FastAPI(title="Movie Recommendation API")
+app.include_router(router)
+
 
 @app.get("/recommend")
 def recommend(

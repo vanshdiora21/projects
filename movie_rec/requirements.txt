@@ -11,3 +11,4 @@ streamlit
 imdbpy
 #sentence-transformers
 sqlalchemy
+pytest
