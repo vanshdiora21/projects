@@ -1,0 +1,75 @@
+{
+    "models": {
+        "black_scholes": {
+            "default_params": {
+                "r": 0.05,
+                "sigma": 0.2
+            }
+        },
+        "heston": {
+            "default_params": {
+                "r": 0.05,
+                "kappa": 2.0,
+                "theta": 0.04,
+                "sigma_v": 0.3,
+                "rho": -0.5,
+                "V0": 0.04
+            },
+            "calibration": {
+                "bounds": {
+                    "kappa": [0.1, 10],
+                    "theta": [0.01, 1],
+                    "sigma_v": [0.1, 2],
+                    "rho": [-0.99, 0.99],
+                    "V0": [0.01, 1]
+                }
+            }
+        },
+        "sabr": {
+            "default_params": {
+                "alpha": 0.3,
+                "beta": 0.5,
+                "rho": -0.3
+            },
+            "calibration": {
+                "bounds": {
+                    "alpha": [0.01, 2],
+                    "beta": [0, 1],
+                    "rho": [-0.99, 0.99]
+                },
+                "fixed_beta": null
+            }
+        }
+    },
+    "simulation": {
+        "monte_carlo": {
+            "default_paths": 100000,
+            "default_steps": 252,
+            "seed": 42,
+            "variance_reduction": {
+                "antithetic": true,
+                "control_variate": true
+            }
+        },
+        "fft": {
+            "default_points": 4096,
+            "damping_parameter": 1.5
+        }
+    },
+    "calibration": {
+        "default_method": "least_squares",
+        "default_optimizer": "L-BFGS-B",
+        "tolerance": 1e-8,
+        "max_iterations": 1000,
+        "cross_validation": {
+            "k_folds": 5,
+            "test_size": 0.2
+        }
+    },
+    "output": {
+        "precision": 6,
+        "export_formats": ["csv", "json", "xlsx"],
+        "plot_style": "seaborn",
+        "figure_size": [10, 6]
+    }
+}
