@@ -1,0 +1,10 @@
+{
+    "total_return": 0.48009711905267627,
+    "annualized_return": 0.20971834158675806,
+    "annualized_volatility": 0.1397765515525789,
+    "sharpe_ratio": 1.288789668528404,
+    "sortino_ratio": 1.4141411532520922,
+    "calmar_ratio": 3.8177564855243427,
+    "max_drawdown": -0.054932351600197646,
+    "trading_days": 519
+}
