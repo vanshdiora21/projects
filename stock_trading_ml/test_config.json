@@ -1,0 +1,63 @@
+{
+    "data": {
+        "tickers": ["AAPL"],
+        "start_date": "2023-01-01",
+        "end_date": "2024-01-01",
+        "data_source": "yahoo",
+        "split_ratio": 0.8
+    },
+    "features": {
+        "lookback_periods": [5, 10, 20],
+        "technical_indicators": ["sma", "ema", "rsi", "macd"],
+        "volatility_window": 20,
+        "return_periods": [1, 5]
+    },
+    "models": {
+        "random_state": 42,
+        "test_size": 0.2,
+        "cv_folds": 3,
+        "models_to_train": ["random_forest", "xgboost"],
+        "hyperparameters": {
+            "random_forest": {
+                "n_estimators": [100, 200],
+                "max_depth": [10, 20]
+            },
+            "xgboost": {
+                "n_estimators": [100, 200],
+                "max_depth": [6, 10]
+            }
+        }
+    },
+    "strategy": {
+        "signal_threshold": 0.6,
+        "position_sizing": "equal_weight",
+        "max_positions": 1,
+        "transaction_costs": 0.001,
+        "stop_loss": 0.05,
+        "take_profit": 0.15,
+        "rebalance_frequency": "daily",
+        "risk_management": {
+            "max_portfolio_risk": 0.02,
+            "max_single_position": 1.0,
+            "volatility_target": 0.15
+        }
+    },
+    "backtest": {
+        "initial_capital": 10000,
+        "benchmark": "SPY",
+        "commission": 0.001,
+        "slippage": 0.0005,
+        "walk_forward": {
+            "training_window": 60,
+            "validation_window": 20,
+            "step_size": 7
+        }
+    },
+    "plotting": {
+        "figure_size": [12, 8],
+        "style": "seaborn-v0_8",
+        "save_plots": true,
+        "plot_directory": "plots/",
+        "formats": ["png"]
+    }
+}
